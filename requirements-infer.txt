@@ -1,0 +1,5 @@
+# Env whisperx-infer (Python 3.11). BELUM DIPASANG/DIUJI.
+# Setelah pemasangan pertama berhasil: pin versi persis (pip freeze) di sini, lalu uji
+# get_vad_chunks() dan load_diarizer() di src/infer_context.py pada versi tersebut.
+whisperx
+soundfile

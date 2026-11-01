@@ -1,0 +1,3 @@
+# Prompt domain (lapisan 1). Maks 40 token tokenizer Whisper; dicek di tests/test_context_builder.py.
+# Angka di sini hanya CONTOH FORMAT, bukan data nasabah. Baris berawalan # diabaikan.
+Telemarketing Bank Mega: kartu kredit, KTA, limit Rp15.000.000, cicilan 0%, tanggal lahir 17-08-1985.

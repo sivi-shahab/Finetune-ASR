@@ -1,0 +1,23 @@
+# Data berisi PII nasabah — JANGAN pernah di-commit
+raw/
+dataset/
+outputs/
+*.flac
+*.wav
+*.gsm
+*.mp3
+*.jsonl
+
+# Environment, cache, log
+.envs/
+.cache/
+logs/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Kredensial
+.env
+*.pem
+*key*
+!src/**/*.py
