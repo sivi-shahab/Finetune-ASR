@@ -7,6 +7,60 @@ Fine-tuning Whisper untuk transkripsi percakapan telemarketing berbahasa Indones
 
 Model hasil fine-tune dikonversi ke CTranslate2 dan dipakai sebagai model ASR di pipeline WhisperX (VAD, alignment, dan diarization tetap dari WhisperX).
 
+## Alur
+
+```mermaid
+flowchart TB
+    subgraph S1["1 · Sumber produksi (read-only)"]
+        direction LR
+        A1["Server rekaman<br/>eCentrix · file GSM 8 kHz"] --> A2["STT v4<br/>ElevenLabs Scribe + diarization pyannote"]
+        A2 --> A3["DB DWH · schema dashboard<br/>result_speech_to_text (JSON per kata)<br/>recording_tms_api · results · qc_status"]
+    end
+
+    subgraph S2["2 · Ekspor — qc_export*.py"]
+        direction LR
+        B1["qc_export_db.py<br/>SELECT read-only di container API"] --> B2["qc_export convert<br/>transcripts · meta · crm · audio_list.csv"]
+        B2 --> B3["Tim ambil audio<br/>sesuai audio_list.csv, di luar skrip"]
+        B3 --> B4["import-audio<br/>ffmpeg → raw/audio/*.flac"]
+    end
+
+    subgraph S3["3 · Dataset — qc_dataset.sh"]
+        direction LR
+        C1["build_dataset.py<br/>segmen ≤ 30 dtk · format akhir · PII · QC"] --> C2["Manifest + antrean<br/>train · validation · test · review_queue"]
+        C2 --> C3["review_server.py<br/>queue: val/test wajib · spotcheck: audit train"]
+        C3 --> C4["check_ready.py<br/>READY / NOT READY"]
+        C3 -. "reviews.jsonl → build ulang" .-> C1
+    end
+
+    subgraph S4["4 · Training — run_train.sh"]
+        direction LR
+        D1["context_builder<br/>prompt domain + CRM + riwayat · 5 variasi"] --> D2["train.py<br/>DDP 2× L40S · bf16 · batch efektif 32"]
+        D2 -- checkpoint --> D3["evaluate.py<br/>WER · entity exact dan value match"]
+        D3 -- terbaik --> D4["convert_ct2.sh<br/>CTranslate2 float16"]
+    end
+
+    subgraph S5["5 · Inferensi WhisperX — run_infer_2gpu.sh"]
+        direction LR
+        E1["VAD WhisperX<br/>audio baru → chunk ≤ 30 dtk"] --> E2["Dekode berurutan<br/>prompt domain + CRM + riwayat"]
+        E2 --> E3["Penjaga<br/>buruk → ulang tanpa riwayat"]
+        E3 --> E4["Align + diarization<br/>transkrip + speaker"]
+        E3 -. "riwayat: hanya hasil yang lolos" .-> E2
+    end
+
+    A3 -- "transkrip + metadata" --> B1
+    A1 -. "file GSM" .-> B3
+    B2 -- "transkrip, meta, CRM" --> C1
+    B4 -- "audio FLAC" --> C1
+    C4 -- READY --> D2
+    D4 -- "model CT2" --> E2
+    D1 -. "format prompt sama" .-> E2
+
+    classDef human fill:#fbefe1,stroke:#b5650d,stroke-width:2px,stroke-dasharray:6 4,color:#16202c
+    class B3,C3 human
+```
+
+Kotak oranye bergaris putus-putus adalah langkah yang dikerjakan manusia. Panduan langkah demi langkah ada di [docs/HOW_TO_TRAIN.md](docs/HOW_TO_TRAIN.md).
+
 ## Dokumen
 
 | File | Isi |
